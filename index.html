@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Gudang Komik</title>
+  <style>
+    body { font-family: sans-serif; margin: 0; padding: 0; }
+    .tab-container { display: flex; overflow-x: auto; border-bottom: 2px solid #ccc; margin: 20px 0; }
+    .tab { flex: none; padding: 12px 20px; cursor: pointer; font-weight: bold; background: #f0f0f0; border-right: 1px solid #ddd; }
+    .tab:hover { background: #4e54c8; color: white; }
+    .tab.active { background: #8f94fb; color: white; }
+    #postList a { display: block; margin: 10px 0; color: blue; text-decoration: underline; cursor: pointer; }
+    #viewer { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.9); display: none; z-index: 9999; }
+    #viewer iframe { width: 100%; height: 100%; border: none; }
+    #closeBtn { position: absolute; top: 10px; right: 20px; color: white; font-size: 20px; cursor: pointer; z-index: 10000; }
+    #loadingIndicator { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10001; display: none; }
+    #loadingIndicator img { width: 150px; height: 150px; }
+    a.viewed { color: gray; opacity: 0.4; }
+  </style>
+</head>
+<body>
+  <p><span style="color: red;">*Scroll ke samping untuk melihat semua judul komik</span></p>
+  <div class="tab-container" id="tabContainer"></div>
+  <div id="loadingIndicator">
+    <img src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgl8FLpJxVrXvGpx-YTiD2ac5M9ll4aQ1HTMbUg9W8dIzfrVzOwiXECqjq535SLGPibtUJbIKBDuzIbH63BGYoz8E2CJymqk9OEglQDblYtaNN4BSSo1c95Z3BT16DvVUR0gZC4wI5fdaDLGN8AoPJRDvKmJkRd7gcYbBaBkZG48hEkjH8AMm8Dn9ayZSo/s1600/loading_11zon.webp" alt="Loading...">
+  </div>
+  <div id="postList"></div>
+  <div id="viewer">
+    <div id="closeBtn"><h2><span style="color: red;">KEMBALI ✖</span></h2></div>
+    <iframe id="iframeViewer" src=""></iframe>
+  </div>
+
+  <script>
+    let postsByLabel = {};
+
+    function fetchPosts() {
+      document.getElementById("loadingIndicator").style.display = "block";
+      fetch("posts.json")
+        .then(response => response.json())
+        .then(data => {
+          postsByLabel = data;
+          renderTabs();
+          document.getElementById("loadingIndicator").style.display = "none";
+        });
+    }
+
+    function renderTabs() {
+      const tabContainer = document.getElementById("tabContainer");
+      tabContainer.innerHTML = "";
+
+      Object.keys(postsByLabel).forEach(label => {
+        const tab = document.createElement("div");
+        tab.className = "tab";
+        tab.textContent = label.replace(/-/g, " ");
+        tab.onclick = (event) => loadLabel(label, event);
+        tabContainer.appendChild(tab);
+      });
+    }
+
+    function loadLabel(labelName, event) {
+      document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById("postList").innerHTML = "";
+      document.getElementById("viewer").style.display = "none";
+      document.getElementById("iframeViewer").src = "";
+
+      const entries = postsByLabel[labelName] || [];
+      renderAll(entries);
+    }
+
+    function renderAll(entries) {
+      const container = document.getElementById("postList");
+      container.innerHTML = "";
+
+      entries.forEach(entry => {
+        const a = document.createElement("a");
+        a.textContent = entry.title;
+        a.href = entry.url;
+        a.rel = "nofollow";
+
+        if (localStorage.getItem(entry.url)) {
+          a.classList.add("viewed");
+        }
+
+        a.onclick = (e) => {
+          e.preventDefault();
+          openViewer(entry.url);
+          a.classList.add("viewed");
+          localStorage.setItem(entry.url, "true");
+        };
+
+        container.appendChild(a);
+      });
+    }
+
+    function openViewer(url) {
+      const viewer = document.getElementById("viewer");
+      const iframe = document.getElementById("iframeViewer");
+      const loading = document.getElementById("loadingIndicator");
+
+      loading.style.display = "block";
+      viewer.style.display = "block";
+      iframe.src = url;
+
+      iframe.onload = () => {
+        loading.style.display = "none";
+      };
+    }
+
+    document.getElementById("closeBtn").onclick = () => {
+      document.getElementById("viewer").style.display = "none";
+      document.getElementById("iframeViewer").src = "";
+    };
+
+    fetchPosts();
+  </script>
+</body>
+</html>
